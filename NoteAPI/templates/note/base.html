@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bootstrap demo</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet"  crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.7.20/sweetalert2.min.css" rel="stylesheet">
+</head>
+  <body>
+    <div class="container">
+        <nav class="navbar bg-body-tertiary">
+            <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">Diary</span>
+            </div>
+        </nav>
+        <form id="form" method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="title" class="form-label">title</label>
+              <input type="text" class="form-control" id="title" name="title" >
+            </div>
+            <div class="mb-3">
+                <label for="content" class="form-label">Content</label>
+                <textarea name="content" class="form-control" id="content" rows="3"></textarea>
+            </div>
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </div>
+        </form>
+        <div class="row" style="margin-top: 20px;">
+            <div id="cards" class="row row-cols-auto" >
+                
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.1/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.7.20/sweetalert2.all.js"></script>
+    <script>
+        function getCookie(name) {
+            let cookie = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+            return cookie ? cookie[2] : null;
+        }
+        async function fetchDiary() {
+            const response = await fetch('/api/note');
+            const data = await response.json();
+            return data;
+        }
+        
+        function deleteCard(event){
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!'
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  const id = event.target.id;
+                  console.log(id);
+                  fetch(`http://127.0.0.1:8000/api/note/${id}`, { 
+                    method: 'DELETE', 
+                    headers: {
+                        'Content-type': 'application/json; charset=UTF-8' // Indicates the content 
+                    },
+                  })
+                  .then(() =>  {
+                    event.target.outerHTML = '';
+                    Swal.fire(
+                    'Deleted!',
+                    'Your file has been deleted.',
+                    'success'
+                    )
+                    
+                  });
+                  
+                }
+              })
+        }
+
+        function Card({id, author, title, content}) {
+            html = `<div id="card-${id}" class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+                <div class="card" style="width: 18rem;">
+                    <div class="card-body">
+                      <h5 class="card-title">${title}</h5>
+                      <h6 class="card-subtitle mb-2 text-body-secondary">${author}</h6>
+                      <p class="card-text">${content}</p>
+                      <a id="${id}" href="#" onclick="deleteCard(event)" class="card-link">DELETE</a>
+                    </div>
+                  </div>
+            </div>`
+
+            return html
+        }
+        
+        fetchDiary().then(data => {
+            data.results.forEach(diary => {
+                console.log(diary);
+                document.getElementById("cards").innerHTML += Card(diary);
+            })
+        }); 
+
+
+        const form = document.getElementById('form');
+        form.addEventListener('submit', function(e){
+            e.preventDefault();
+            let title = document.getElementById('title').value;
+            let content = document.getElementById('content').value;
+            let csrftoken = getCookie('csrftoken');
+
+            fetch('/api/note', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                    title: title,
+                    content: content,
+                
+                }),
+                headers: {
+                  'Content-type': 'application/json; charset=UTF-8',
+                  "X-CSRFToken": csrftoken,
+                }
+            })
+            .then(response =>  response.json())
+            .then(data => {
+                console.log(data);
+                document.getElementById("cards").innerHTML += Card(data);
+            })
+            .catch(error => console.error('Error:', error)); 
+            });
+
+    </script>
+  </body>
+</html>
